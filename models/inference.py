@@ -40,9 +40,11 @@ class BaseBackendModel():
         if id is None:
             return 'reject'
         if task == 'binary':
-            return ['B', 'M'][id] if id < 2 else 'reject'
+            # return ['B', 'M'][id] if id < 2 else 'reject'
+            return ['Benign', 'Malignant'][id] if id < 2 else 'reject'
         else:
-            return ['A', 'F', 'PT', 'TA', 'DC', 'LC', 'MC', 'PC'][id] if id < 8 else 'reject'
+            # return ['A', 'F', 'PT', 'TA', 'DC', 'LC', 'MC', 'PC'][id] if id < 8 else 'reject'
+            return ['Adenosis', 'Fibroadenoma', 'Phyllodes Tumor', 'Tubular Adenoma', 'Ductal Carcinoma', 'Lobular Carcinoma', 'Mucinous Carcinoma', 'Papillary Carcinoma'][id] if id < 8 else 'reject'
     
 
 
