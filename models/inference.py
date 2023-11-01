@@ -34,6 +34,7 @@ class BaseBackendModel():
     def inference(self, img_path):
         raise NotImplementedError
 
+    @staticmethod
     def get_label(task, id):
         assert task in ['binary', 'subtype'], 'task should be either binary or subtype'
         if id is None:
@@ -99,23 +100,23 @@ class BackendModel(BaseBackendModel):
         binary_maxes, binary_argmaxes = torch.max(binary_outputs, dim=1)
         subtype_maxes, subtype_argmaxes = torch.max(subtype_outputs, dim=1)
 
-        result = {}
+        results = {}
         for path, binary_output, subtype_output, binary_max, binary_argmax, subtype_max, subtype_argmax \
             in zip(img_path, binary_outputs, subtype_outputs, binary_maxes, binary_argmaxes, subtype_maxes, subtype_argmaxes):
-            result[path] = {'pred':{}, 'prob':{}}
+            results[path] = {'pred':{}, 'prob':{}}
             if binary_max < self.reject_threshold:
-                result[path]['pred']['binary'] = None
-                result[path]['prob']['binary'] = binary_output.tolist()
+                results[path]['pred']['binary'] = None
+                results[path]['prob']['binary'] = binary_output.tolist()
             else:
-                result[path]['pred']['binary'] = binary_argmax.item()
-                result[path]['prob']['binary'] = binary_output.tolist()
+                results[path]['pred']['binary'] = binary_argmax.item()
+                results[path]['prob']['binary'] = binary_output.tolist()
             if subtype_max < self.reject_threshold:
-                result[path]['pred']['subtype'] = None
-                result[path]['prob']['subtype'] = subtype_output.tolist()
+                results[path]['pred']['subtype'] = None
+                results[path]['prob']['subtype'] = subtype_output.tolist()
             else:
-                result[path]['pred']['subtype'] = subtype_argmax.item()
-                result[path]['prob']['subtype'] = subtype_output.tolist()
-        return result
+                results[path]['pred']['subtype'] = subtype_argmax.item()
+                results[path]['prob']['subtype'] = subtype_output.tolist()
+        return results
 
 
 # Used for testing
