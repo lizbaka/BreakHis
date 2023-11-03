@@ -30,18 +30,18 @@ class ImageViewer(QLabel):
         self.setPixmap(img)
 
 
-class StartButton(QPushButton):
+class IconTextButton(QPushButton):
 
-    def __init__(self, parent):
+    def __init__(self, parent, iconPath, text):
         super().__init__(parent)
         self.parent = parent
-        self.initUI()
+        self.initUI(iconPath, text)
     
-    def initUI(self):
-        self.setFixedWidth(200)
-        self.setText("Start")
+    def initUI(self, iconPath, text):
+        self.setFixedWidth(150)
+        self.setText(text)
         self.setFont(QFont("Arial", 12))
-        self.setIcon(QIcon("./assets/play-64.ico"))
+        self.setIcon(QIcon(iconPath))
 
 
 class BaseResultGroupBox(QGroupBox):
@@ -86,9 +86,18 @@ class PredictionGroupBox(BaseResultGroupBox):
         self.initUI()
 
 
+    def updatePredictionIndex(self, tumorClass, tumorType):
+        self.valueLabels['class'].setText(BackendModel.get_label('binary', tumorClass))
+        self.valueLabels['type'].setText(BackendModel.get_label('subtype', tumorType))
+
+
     def updatePrediction(self, tumorClass, tumorType):
         self.valueLabels['class'].setText(tumorClass)
         self.valueLabels['type'].setText(tumorType)
+
+    
+    def reset(self):
+        self.updatePrediction('', '')
 
 
 class ProbabilityGroupBox(BaseResultGroupBox):
@@ -150,7 +159,7 @@ class ProbabilityGroupBox(BaseResultGroupBox):
         self.valueLabels['prob_PC'].setText('')
 
 
-class ImageList(QTableWidget):
+class ImageTableWidget(QTableWidget):
         
     imported = pyqtSignal(list)
     
@@ -197,7 +206,6 @@ class ImageList(QTableWidget):
 
     def dropEvent(self, event):
         if event.mimeData().hasUrls:
-            # event.setDropAction(Qt.CopyAction)
             event.accept()
             paths = []
             for url in event.mimeData().urls():
@@ -238,3 +246,8 @@ class ImageList(QTableWidget):
                 tumorType = BackendModel.get_label('subtype', results[imgPath]['pred']['subtype'], abbrev=True)
                 self.setItem(i, 2, QTableWidgetItem(tumorClass))
                 self.setItem(i, 3, QTableWidgetItem(tumorType))
+
+    def reset(self):
+        for _ in range(self.rowCount()):
+            self.removeRow(0)
+            
