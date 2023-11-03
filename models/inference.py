@@ -60,6 +60,11 @@ class BaseBackendModel():
         return bin_list if task == 'binary' else subtype_list
     
 
+    @staticmethod
+    def generate_empty_result():
+        return {'pred':{'binary':None, 'subtype':None}, 'prob':{'binary':[0,0], 'subtype':[0,0,0,0,0,0,0,0]}}
+    
+
 class BackendModel(BaseBackendModel):
 
     data_transform = transforms.Compose(
