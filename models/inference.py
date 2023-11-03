@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import models.networks as networks
+from torchcam.methods import CAM
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -20,7 +21,7 @@ class BreaKHis(Dataset):
             img = self.transform(img)
         else:
             img = transforms.ToTensor()(img)
-        return img
+        return path, img
 
     def __len__(self):
         return len(self.img_list)
@@ -62,7 +63,7 @@ class BaseBackendModel():
 
     @staticmethod
     def generate_empty_result():
-        return {'pred':{'binary':None, 'subtype':None}, 'prob':{'binary':[0,0], 'subtype':[0,0,0,0,0,0,0,0]}}
+        return {'pred':{'binary':None, 'subtype':None}, 'prob':{'binary':[0,0], 'subtype':[0,0,0,0,0,0,0,0]}, 'cam':{'binary':None, 'subtype':None}}
     
 
 class BackendModel(BaseBackendModel):
@@ -80,11 +81,11 @@ class BackendModel(BaseBackendModel):
 
         self._models = {
             'binary': networks.ResNet50(num_classes=2),
-            'subtype': networks.ResNet50(num_classes=8),
+            'subtype': networks.DenseNet201(num_classes=8),
         }
         self._ckpts = {
             'binary': './models/ckpt/resnet50-bin.pth',
-            'subtype': './models/ckpt/resnet50-sub.pth',
+            'subtype': './models/ckpt/densenet201-sub.pth',
         }
         self.loaded = False
 
@@ -104,15 +105,29 @@ class BackendModel(BaseBackendModel):
         self._load()
         dataset = BreaKHis(img_path, transform=self.data_transform)
         iterator = DataLoader(dataset, batch_size=4, shuffle=False, num_workers=4)
+        cam_extractors = {
+            'binary': CAM(self._models['binary']),
+            'subtype': CAM(self._models['subtype'])
+        }
+        img_path = []
         binary_outputs = torch.tensor([]).to(device)
         subtype_outputs = torch.tensor([]).to(device)
+        binary_cams = torch.tensor([]).to(device)
+        subtype_cams = torch.tensor([]).to(device)
         with torch.no_grad():
-            for img in iterator:
+            for path, img in iterator:
                 img_tensor = img.to(device)
                 binary_output = self._models['binary'](img_tensor)
                 subtype_output = self._models['subtype'](img_tensor)
+
+                img_path += path
                 binary_outputs = torch.cat((binary_outputs, binary_output), dim=0)
                 subtype_outputs = torch.cat((subtype_outputs, subtype_output), dim=0)
+                
+                binary_cam = cam_extractors['binary'](torch.argmax(binary_output, dim=1).tolist(), binary_output)[0]
+                subtype_cam = cam_extractors['subtype'](torch.argmax(subtype_output, dim=1).tolist(), subtype_output)[0]
+                binary_cams = torch.cat((binary_cams, binary_cam), dim=0)
+                subtype_cams = torch.cat((subtype_cams, subtype_cam), dim=0)
         
         binary_outputs = binary_outputs.cpu()
         subtype_outputs = subtype_outputs.cpu()
@@ -120,21 +135,21 @@ class BackendModel(BaseBackendModel):
         subtype_maxes, subtype_argmaxes = torch.max(subtype_outputs, dim=1)
 
         results = {}
-        for path, binary_output, subtype_output, binary_max, binary_argmax, subtype_max, subtype_argmax \
-            in zip(img_path, binary_outputs, subtype_outputs, binary_maxes, binary_argmaxes, subtype_maxes, subtype_argmaxes):
-            results[path] = {'pred':{}, 'prob':{}}
+        for path, binary_output, subtype_output, binary_max, binary_argmax, subtype_max, subtype_argmax, binary_cam, subtype_cam\
+            in zip(img_path, binary_outputs, subtype_outputs, binary_maxes, binary_argmaxes, subtype_maxes, subtype_argmaxes, binary_cams, subtype_cams):
+            results[path] = {'pred':{}, 'prob':{}, 'cam':{}}
             if binary_max < self.reject_threshold:
                 results[path]['pred']['binary'] = None
-                results[path]['prob']['binary'] = binary_output.tolist()
             else:
                 results[path]['pred']['binary'] = binary_argmax.item()
-                results[path]['prob']['binary'] = binary_output.tolist()
             if subtype_max < self.reject_threshold:
                 results[path]['pred']['subtype'] = None
-                results[path]['prob']['subtype'] = subtype_output.tolist()
             else:
                 results[path]['pred']['subtype'] = subtype_argmax.item()
-                results[path]['prob']['subtype'] = subtype_output.tolist()
+            results[path]['cam']['binary'] = binary_cam.cpu().numpy()
+            results[path]['prob']['binary'] = binary_output.tolist()
+            results[path]['cam']['subtype'] = subtype_cam.cpu().numpy()
+            results[path]['prob']['subtype'] = subtype_output.tolist()
         return results
 
 
@@ -150,7 +165,7 @@ class RandomBackendModel(BaseBackendModel):
         time.sleep(10)
         result = {}
         for path in img_path:
-            result[path] = {'pred':{}, 'prob':{}}
+            result[path] = {'pred':{}, 'prob':{}, 'cam':{}}
             result[path]['prob']['binary'] = np.random.dirichlet(np.ones(2), size=1)[0]
             result[path]['prob']['subtype'] = np.random.dirichlet(np.ones(8), size=1)[0]
             if np.max(result[path]['prob']['binary']) < self.reject_threshold:
@@ -163,5 +178,8 @@ class RandomBackendModel(BaseBackendModel):
                 result[path]['pred']['subtype'] = np.argmax(result[path]['prob']['subtype'])
             result[path]['prob']['binary'] = result[path]['prob']['binary'].tolist()
             result[path]['prob']['subtype'] = result[path]['prob']['subtype'].tolist()
+            result[path]['cam']['binary'] = np.random.rand(460, 700)
+            result[path]['cam']['subtype'] = np.random.rand(460, 700)
+
         return result
     
