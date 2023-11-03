@@ -34,8 +34,21 @@ class BaseBackendModel():
     def inference(self, img_path):
         raise NotImplementedError
 
+
     @staticmethod
     def get_label(task, id, abbrev=False):
+        assert task in ['binary', 'subtype'], 'task should be either binary or subtype'
+        labels = BaseBackendModel.get_all_labels(task, abbrev)
+        if id is None:
+            return 'reject'
+        if task == 'binary':
+            return labels[id] if id < 2 else 'reject'
+        else:
+            return labels[id] if id < 8 else 'reject'
+        
+    
+    @staticmethod
+    def get_all_labels(task, abbrev=False):
         assert task in ['binary', 'subtype'], 'task should be either binary or subtype'
         if abbrev:
             bin_list = ['B', 'M']
@@ -43,12 +56,8 @@ class BaseBackendModel():
         else:
             bin_list = ['Benign', 'Malignant']
             subtype_list = ['Adenosis', 'Fibroadenoma', 'Phyllodes Tumor', 'Tubular Adenoma', 'Ductal Carcinoma', 'Lobular Carcinoma', 'Mucinous Carcinoma', 'Papillary Carcinoma']
-        if id is None:
-            return 'reject'
-        if task == 'binary':
-            return bin_list[id] if id < 2 else 'reject'
-        else:
-            return subtype_list[id] if id < 8 else 'reject'
+
+        return bin_list if task == 'binary' else subtype_list
     
 
 class BackendModel(BaseBackendModel):
