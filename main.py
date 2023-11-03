@@ -16,7 +16,6 @@ class InferenceTask(QObject):
 
     
     def run(self):
-        print('run')
         result = self.backEndModel.inference(self.paths)
         self.finished.emit(result)
 
@@ -28,41 +27,50 @@ class Window(QWidget):
         self.setWindowTitle("Breast Cancer Classifier")
         self.imageViewer = UI.ImageViewer(self)
         self.startButton = UI.StartButton(self)
-        self.pathGroupBox = UI.PathGroupBox(self)
         self.predGroupBox = UI.PredictionGroupBox(self)
         self.probGroupBox = UI.ProbabilityGroupBox(self)
+        self.imageList = UI.ImageList(self)
 
         self.results = {}
         self.backendModel = UI.BackendModel()
-        self.imgPath = None
+        self.imgPaths = []
+        self.selectedImgPath = None
 
+        self.connectSignals()
         self.initUI()
 
-        def imageChanged(img_path):
-            self.imgPath = img_path
-            self.pathGroupBox.updatePath(img_path)
-            self.predGroupBox.updatePrediction('', '')
-            self.probGroupBox.reset()
+
+    def connectSignals(self):
+
+        def selectImage(imgPath):
+            self.selectedImgPath = imgPath
+            self.imageViewer.setImage(imgPath)
+            if imgPath in self.results.keys():
+                bin_pred = self.backendModel.get_label('binary', self.results[imgPath]['pred']['binary'])
+                sub_pred = self.backendModel.get_label('subtype', self.results[imgPath]['pred']['subtype'])
+                self.predGroupBox.updatePrediction(bin_pred, sub_pred)
+                self.probGroupBox.updateProbability(self.results[imgPath]['prob']['binary'], self.results[imgPath]['prob']['subtype'])
+            else:
+                self.predGroupBox.updatePrediction('', '')
+                self.probGroupBox.reset()
         
-        self.imageViewer.imageChanged.connect(imageChanged)
+        self.imageList.itemSelectionChanged.connect(lambda: selectImage(self.imageList.getSelectedImagePath()))
 
         def inferenceFinished(results):
             self.startButton.setEnabled(True)
             self.startButton.setText('Start')
-            self.imageViewer.setAcceptDrops(True)
-            self.results = results
-            bin_pred = self.backendModel.get_label('binary', results[self.imgPath]['pred']['binary'])
-            subtype_pred = self.backendModel.get_label('subtype', results[self.imgPath]['pred']['subtype'])
-            self.predGroupBox.updatePrediction(bin_pred, subtype_pred)
-            self.probGroupBox.updateProbability(results[self.imgPath]['prob']['binary'], results[self.imgPath]['prob']['subtype'])
+            self.imageList.setAcceptDrops(True)
+            self.results.update(results)
+            self.imageList.updateResult(results)
 
         def startInference():
-            if self.imgPath is None:
+            if len(self.imgPaths) == 0:
+                QMessageBox.warning(self, "No image imported", "Please import at least one image to start inferencing.")
                 return
             self.startButton.setText('inferencing')
             self.startButton.setEnabled(False)
-            self.imageViewer.setAcceptDrops(False)
-            self.task = InferenceTask(self.backendModel, [self.imgPath])
+            self.imageList.setAcceptDrops(False)
+            self.task = InferenceTask(self.backendModel, self.imgPaths)
             self.workerThread = QThread()
             self.task.moveToThread(self.workerThread)
             self.workerThread.started.connect(self.task.run)
@@ -74,34 +82,48 @@ class Window(QWidget):
 
         self.startButton.clicked.connect(startInference)
 
+        def imported(imgPaths):
+            self.imgPaths = imgPaths
+            self.imageList.addImages(imgPaths)
+
+        self.imageList.imported.connect(imported)
+
 
     def initUI(self):
         self.resize(1500,800)
         self.setFixedSize(self.size())
 
         self.setLayout(QHBoxLayout())
+
         self.leftPanel = QWidget(self)
-        self.leftPanel.setFixedWidth(1000)
         self.leftPanel.setLayout(QVBoxLayout())
-        self.leftPanel.layout().addWidget(self.imageViewer)
+        spImgList = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        spImgList.setVerticalStretch(1)
+        self.imageList.setSizePolicy(spImgList)
+        self.leftPanel.layout().addWidget(self.imageList)
         self.leftPanel.layout().addWidget(self.startButton, alignment=Qt.AlignHCenter)
+
+
+        self.middlePanel = QWidget(self)
+        self.middlePanel.setLayout(QVBoxLayout())
+        self.middlePanel.layout().addWidget(self.imageViewer)
+        spMiddle = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        spMiddle.setHorizontalStretch(1)
+        self.middlePanel.setSizePolicy(spMiddle)
 
         self.rightPanel = QWidget(self)
         self.rightPanel.setLayout(QVBoxLayout())
-        spPath = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        spPath.setVerticalStretch(1)
-        self.pathGroupBox.setSizePolicy(spPath)
-        self.rightPanel.layout().addWidget(self.pathGroupBox)
         spPred = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        spPred.setVerticalStretch(2)
+        spPred.setVerticalStretch(1)
         self.predGroupBox.setSizePolicy(spPred)
         self.rightPanel.layout().addWidget(self.predGroupBox)
         spProb = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        spProb.setVerticalStretch(8)
+        spProb.setVerticalStretch(4)
         self.probGroupBox.setSizePolicy(spProb)
         self.rightPanel.layout().addWidget(self.probGroupBox)
 
         self.layout().addWidget(self.leftPanel)
+        self.layout().addWidget(self.middlePanel)
         self.layout().addWidget(self.rightPanel)
 
 

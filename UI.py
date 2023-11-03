@@ -6,26 +6,10 @@ from models.inference import *
 
 class ImageViewer(QLabel):
 
-    imageChanged = pyqtSignal(str)
-
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
         self.initUI()
-        self.setAcceptDrops(True)
-
-    
-    def dragEnterEvent(self, e):
-        if e.mimeData().hasUrls():
-            e.accept()
-        else:
-            e.ignore()
-        
-    
-    def dropEvent(self, e):
-        paths = [url.toLocalFile() for url in e.mimeData().urls()]
-        paths = [paths[0]]
-        self.setImage(paths[0])
 
 
     def initUI(self):
@@ -37,14 +21,13 @@ class ImageViewer(QLabel):
         self.setPalette(pal)
         
         self.setFont(QFont("Arial", 12))
-        self.setText("Drag image here")
+        self.setText("Image Viewer")
 
 
     def setImage(self, img_path):
         img = QPixmap(img_path)
         img = img.scaled(self.width(), self.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setPixmap(img)
-        self.imageChanged.emit(img_path)
 
 
 class StartButton(QPushButton):
@@ -73,7 +56,8 @@ class BaseResultGroupBox(QGroupBox):
     
     def initUI(self):
         self.setTitle(self.title)
-        self.setFont(QFont("Arial", 12))
+        self.setFont(QFont("Arial", 10))
+        self.setFixedWidth(400)
 
         self.setLayout(QVBoxLayout())
         
@@ -82,26 +66,6 @@ class BaseResultGroupBox(QGroupBox):
             itemLayout.addWidget(self.keyLabels[key])
             itemLayout.addWidget(self.valueLabels[key])
             self.layout().addLayout(itemLayout)
-
-
-class PathGroupBox(BaseResultGroupBox):
-    
-    def __init__(self, parent):
-        self.keyLabels = {
-            'path': QLabel("Path:")
-        }
-        self.valueLabels = {
-            'path': QLabel()
-        }
-
-        super().__init__(parent, "Path", self.keyLabels, self.valueLabels)
-        self.parent = parent
-
-        self.initUI()
-
-
-    def updatePath(self, path):
-        self.valueLabels['path'].setText(path)
 
 
 class PredictionGroupBox(BaseResultGroupBox):
@@ -184,3 +148,93 @@ class ProbabilityGroupBox(BaseResultGroupBox):
         self.valueLabels['prob_LC'].setText('')
         self.valueLabels['prob_MC'].setText('')
         self.valueLabels['prob_PC'].setText('')
+
+
+class ImageList(QTableWidget):
+        
+    imported = pyqtSignal(list)
+    
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.initUI()
+        self.setAcceptDrops(True)
+
+        self.setColumnCount(4)
+        self.setHorizontalHeaderLabels(['Image', 'Path', 'Class', 'Type'])
+        self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.setColumnWidth(0, 120)
+        self.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
+        self.setColumnWidth(2, 50)
+        self.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)
+        self.setColumnWidth(3, 50)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+
+
+    def initUI(self):
+        self.setFixedWidth(400)
+        self.verticalHeader().setVisible(False)
+
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls:
+            event.accept()
+        else:
+            event.ignore()
+
+    
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls:
+            event.accept()
+        else:
+            event.ignore()
+
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls:
+            # event.setDropAction(Qt.CopyAction)
+            event.accept()
+            paths = []
+            for url in event.mimeData().urls():
+                paths.append(url.toLocalFile())
+            self.imported.emit(paths)
+        else:
+            event.ignore()
+    
+
+    def addImage(self, imgPath):
+        row = self.rowCount()
+        self.insertRow(row)
+        imgLabel = QLabel()
+        imgLabel.setPixmap(QPixmap(imgPath).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        imgLabel.setAlignment(Qt.AlignCenter)
+        self.setCellWidget(row, 0, imgLabel)
+        self.setItem(row, 1, QTableWidgetItem(imgPath))
+
+    
+    def addImages(self, imgPaths):
+        for imgPath in imgPaths:
+            self.addImage(imgPath)
+
+
+    def getSelectedImagePath(self):
+        if self.selectedItems():
+            row = self.selectedItems()[0].row()
+            return self.item(row, 1).text()
+        else:
+            return None
+        
+    
+    def updateResult(self, results):
+        for i in range(self.rowCount()):
+            imgPath = self.item(i, 1).text()
+            if imgPath in results.keys():
+                tumorClass = BackendModel.get_label('binary', results[imgPath]['pred']['binary'], abbrev=True)
+                tumorType = BackendModel.get_label('subtype', results[imgPath]['pred']['subtype'], abbrev=True)
+                self.setItem(i, 2, QTableWidgetItem(tumorClass))
+                self.setItem(i, 3, QTableWidgetItem(tumorType))
