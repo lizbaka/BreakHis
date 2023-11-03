@@ -35,18 +35,21 @@ class BaseBackendModel():
         raise NotImplementedError
 
     @staticmethod
-    def get_label(task, id):
+    def get_label(task, id, abbrev=False):
         assert task in ['binary', 'subtype'], 'task should be either binary or subtype'
+        if abbrev:
+            bin_list = ['B', 'M']
+            subtype_list = ['A', 'F', 'PT', 'TA', 'DC', 'LC', 'MC', 'PC']
+        else:
+            bin_list = ['Benign', 'Malignant']
+            subtype_list = ['Adenosis', 'Fibroadenoma', 'Phyllodes Tumor', 'Tubular Adenoma', 'Ductal Carcinoma', 'Lobular Carcinoma', 'Mucinous Carcinoma', 'Papillary Carcinoma']
         if id is None:
             return 'reject'
         if task == 'binary':
-            # return ['B', 'M'][id] if id < 2 else 'reject'
-            return ['Benign', 'Malignant'][id] if id < 2 else 'reject'
+            return bin_list[id] if id < 2 else 'reject'
         else:
-            # return ['A', 'F', 'PT', 'TA', 'DC', 'LC', 'MC', 'PC'][id] if id < 8 else 'reject'
-            return ['Adenosis', 'Fibroadenoma', 'Phyllodes Tumor', 'Tubular Adenoma', 'Ductal Carcinoma', 'Lobular Carcinoma', 'Mucinous Carcinoma', 'Papillary Carcinoma'][id] if id < 8 else 'reject'
+            return subtype_list[id] if id < 8 else 'reject'
     
-
 
 class BackendModel(BaseBackendModel):
 
