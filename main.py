@@ -34,6 +34,7 @@ class Window(QWidget):
         self.clearButton = UI.IconTextButton(self, 'assets/clear-64.png', 'Clear')
         self.classComboBox = QComboBox(self)
         self.typeComboBox = QComboBox(self)
+        self.camComboBox = QComboBox(self)
         self.predGroupBox = UI.PredictionGroupBox(self)
         self.probGroupBox = UI.ProbabilityGroupBox(self)
         self.imageTableWidget = UI.ImageTableWidget(self)
@@ -49,6 +50,8 @@ class Window(QWidget):
         self.typeComboBox.addItems(BackendModel.get_all_labels('subtype'))
         self.typeComboBox.addItem('')
         self.typeComboBox.setCurrentIndex(self.typeComboBox.count()-1)
+        self.camComboBox.addItems(['Disable CAM', 'Binary CAM', 'Subtype CAM'])
+        
 
         self.initUI()
         self.connectSignals()
@@ -65,8 +68,11 @@ class Window(QWidget):
                 self.classComboBox.setCurrentIndex(self.classComboBox.count()-1)
                 self.typeComboBox.setCurrentIndex(self.typeComboBox.count()-1)
                 return
-            self.imageViewer.setImage(self.selectedImgPath)
             if self.selectedImgPath in self.results.keys():
+                self.imageViewer.setImage(self.selectedImgPath, 
+                                          self.results[self.selectedImgPath]['cam']['binary'] if self.camComboBox.currentIndex() == 1 
+                                          else self.results[self.selectedImgPath]['cam']['subtype'] if self.camComboBox.currentIndex() == 2 
+                                          else None)
                 classPredIdx = self.results[self.selectedImgPath]['pred']['binary']
                 typePredIdx = self.results[self.selectedImgPath]['pred']['subtype']
                 self.predGroupBox.updatePredictionIndex(classPredIdx, typePredIdx)
@@ -74,6 +80,7 @@ class Window(QWidget):
                 self.classComboBox.setCurrentIndex(classPredIdx if classPredIdx is not None else self.classComboBox.count()-1)
                 self.typeComboBox.setCurrentIndex(typePredIdx if typePredIdx is not None else self.typeComboBox.count()-1)
             else:
+                self.imageViewer.setImage(self.selectedImgPath)
                 self.predGroupBox.reset()
                 self.probGroupBox.reset()
                 self.classComboBox.setCurrentIndex(self.classComboBox.count()-1)
@@ -159,6 +166,9 @@ class Window(QWidget):
             self.imageTableWidget.updateResult(self.results)
             changeCurrentImage()
 
+        def camSelected(index):
+            changeCurrentImage()
+
         self.imageTableWidget.itemSelectionChanged.connect(lambda: selectImage(self.imageTableWidget.getSelectedImagePath()))
         self.imageTableWidget.imported.connect(imported)
 
@@ -168,6 +178,7 @@ class Window(QWidget):
 
         self.classComboBox.activated.connect(classSelected)
         self.typeComboBox.activated.connect(typeSelected)
+        self.camComboBox.activated.connect(camSelected)
 
 
     def initUI(self):
@@ -176,9 +187,10 @@ class Window(QWidget):
 
         controllPanel = QWidget(self)
         controllPanel.setLayout(QGridLayout())
-        controllPanel.layout().addWidget(self.clearButton, 0, 0, 1, 2, alignment=Qt.AlignHCenter)
-        controllPanel.layout().addWidget(self.startButton, 1, 0, alignment=Qt.AlignHCenter)
-        controllPanel.layout().addWidget(self.saveButton, 2, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self.startButton, 0, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self.saveButton, 1, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self.clearButton, 2, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self.camComboBox, 0, 1)
         controllPanel.layout().addWidget(self.classComboBox, 1, 1)
         controllPanel.layout().addWidget(self.typeComboBox, 2, 1)
         

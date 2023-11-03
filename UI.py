@@ -1,7 +1,16 @@
+import numpy as np
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from models.inference import *
+from PIL import Image
+from torchcam.utils import overlay_mask
+
+
+def draw_CAM(img, cam):
+    # convert cam to PIL image
+    cam = Image.fromarray(cam)
+    return overlay_mask(img, cam, alpha=0.5)
 
 
 class ImageViewer(QLabel):
@@ -24,10 +33,13 @@ class ImageViewer(QLabel):
         self.setText("Image Viewer")
 
 
-    def setImage(self, img_path):
-        img = QPixmap(img_path)
+    def setImage(self, img_path, cam = None):
+        img = Image.open(img_path).convert('RGB')
+        if cam is not None:
+            img = draw_CAM(img, cam)
+        img = img.toqimage()
         img = img.scaled(self.width(), self.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.setPixmap(img)
+        self.setPixmap(QPixmap.fromImage(img))
 
 
 class IconTextButton(QPushButton):
