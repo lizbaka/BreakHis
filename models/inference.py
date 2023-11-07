@@ -66,6 +66,20 @@ class BaseBackendModel():
         return {'pred':{'binary':None, 'subtype':None}, 'prob':{'binary':[0,0], 'subtype':[0,0,0,0,0,0,0,0]}, 'cam':{'binary':None, 'subtype':None}}
     
 
+    @staticmethod
+    def checkConflict(tumorClass, tumorType):
+        assert tumorClass in [0, 1, None], 'tumorClass should be either 0 or 1'
+        assert tumorType in [0, 1, 2, 3, 4, 5, 6, 7, None], 'tumorType should be either 0, 1, 2, 3, 4, 5, 6, 7'
+        if tumorClass == None or tumorType == None:
+            return False
+        if tumorClass == 0 and tumorType not in [0, 1, 2, 3]:
+            return True
+        elif tumorClass == 1 and tumorType not in [4, 5, 6, 7]:
+            return True
+        else:
+            return False
+
+
 class BackendModel(BaseBackendModel):
 
     data_transform = transforms.Compose(
@@ -146,6 +160,9 @@ class BackendModel(BaseBackendModel):
                 results[path]['pred']['subtype'] = None
             else:
                 results[path]['pred']['subtype'] = subtype_argmax.item()
+            if BaseBackendModel.checkConflict(results[path]['pred']['binary'], results[path]['pred']['subtype']):
+                results[path]['pred']['binary'] = None
+                results[path]['pred']['subtype'] = None
             results[path]['cam']['binary'] = binary_cam.cpu().numpy()
             results[path]['prob']['binary'] = binary_output.tolist()
             results[path]['cam']['subtype'] = subtype_cam.cpu().numpy()
