@@ -44,10 +44,10 @@ class Window(QWidget):
         self.imgPaths = []
         self.selectedImgPath = None
 
-        self.classComboBox.addItems(BackendModel.get_all_labels('binary'))
+        self.classComboBox.addItems(BaseBackendModel.get_all_labels('binary'))
         self.classComboBox.addItem('')
         self.classComboBox.setCurrentIndex(self.classComboBox.count()-1)
-        self.typeComboBox.addItems(BackendModel.get_all_labels('subtype'))
+        self.typeComboBox.addItems(BaseBackendModel.get_all_labels('subtype'))
         self.typeComboBox.addItem('')
         self.typeComboBox.setCurrentIndex(self.typeComboBox.count()-1)
         self.camComboBox.addItems(['Disable CAM', 'Binary CAM', 'Subtype CAM'])
@@ -134,8 +134,8 @@ class Window(QWidget):
                 return
             df = pd.DataFrame(columns=['image_path', 'tumor_class', 'tumor_type'])
             for imgPath in self.results.keys():
-                tumorClass = BackendModel.get_label('binary', self.results[imgPath]['pred']['binary'])
-                tumorType = BackendModel.get_label('subtype', self.results[imgPath]['pred']['subtype'])
+                tumorClass = BaseBackendModel.get_label('binary', self.results[imgPath]['pred']['binary'])
+                tumorType = BaseBackendModel.get_label('subtype', self.results[imgPath]['pred']['subtype'])
                 # append is deprecated
                 df.loc[len(df)] = [imgPath, tumorClass, tumorType]
 
@@ -152,7 +152,7 @@ class Window(QWidget):
             if index == self.classComboBox.count()-1 or self.selectedImgPath is None:
                 return
             if not self.selectedImgPath in self.results.keys():
-                self.results[self.selectedImgPath] = BackendModel.generate_empty_result()
+                self.results[self.selectedImgPath] = BaseBackendModel.generate_empty_result()
             self.results[self.selectedImgPath]['pred']['binary'] = index
             self.imageTableWidget.updateResult(self.results)
             changeCurrentImage()
@@ -161,7 +161,7 @@ class Window(QWidget):
             if index == self.typeComboBox.count()-1 or self.selectedImgPath is None:
                 return
             if not self.selectedImgPath in self.results.keys():
-                self.results[self.selectedImgPath] = BackendModel.generate_empty_result()
+                self.results[self.selectedImgPath] = BaseBackendModel.generate_empty_result()
             self.results[self.selectedImgPath]['pred']['subtype'] = index
             self.imageTableWidget.updateResult(self.results)
             changeCurrentImage()

@@ -99,8 +99,8 @@ class PredictionGroupBox(BaseResultGroupBox):
 
 
     def updatePredictionIndex(self, tumorClass, tumorType):
-        self.valueLabels['class'].setText(BackendModel.get_label('binary', tumorClass))
-        self.valueLabels['type'].setText(BackendModel.get_label('subtype', tumorType))
+        self.valueLabels['class'].setText(BaseBackendModel.get_label('binary', tumorClass))
+        self.valueLabels['type'].setText(BaseBackendModel.get_label('subtype', tumorType))
 
 
     def updatePrediction(self, tumorClass, tumorType):
@@ -254,8 +254,8 @@ class ImageTableWidget(QTableWidget):
         for i in range(self.rowCount()):
             imgPath = self.item(i, 1).text()
             if imgPath in results.keys():
-                tumorClass = BackendModel.get_label('binary', results[imgPath]['pred']['binary'], abbrev=True)
-                tumorType = BackendModel.get_label('subtype', results[imgPath]['pred']['subtype'], abbrev=True)
+                tumorClass = BaseBackendModel.get_label('binary', results[imgPath]['pred']['binary'], abbrev=True)
+                tumorType = BaseBackendModel.get_label('subtype', results[imgPath]['pred']['subtype'], abbrev=True)
                 self.setItem(i, 2, QTableWidgetItem(tumorClass))
                 self.setItem(i, 3, QTableWidgetItem(tumorType))
 
