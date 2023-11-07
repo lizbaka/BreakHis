@@ -10,7 +10,8 @@ from models.inference import *
 
 class InferenceTask(QObject):
 
-    finished = pyqtSignal(dict)
+    finished = pyqtSignal()
+    progress = pyqtSignal(dict, int)
 
     def __init__(self, backEndModel, paths):
         QObject.__init__(self)
@@ -19,8 +20,10 @@ class InferenceTask(QObject):
 
     
     def run(self):
-        result = self.backEndModel.inference(self.paths)
-        self.finished.emit(result)
+        for i in range(0, len(self.paths), 16):
+            result = self.backEndModel.inference(self.paths[i:i+16])
+            self.progress.emit(result, i+16 if i+16 < len(self.paths) else len(self.paths))
+        self.finished.emit()
 
 
 class Window(QWidget):
@@ -29,9 +32,11 @@ class Window(QWidget):
         QWidget.__init__(self)
         self.setWindowTitle("Breast Cancer Classifier")
         self.imageViewer = UI.ImageViewer(self)
+        self.importButton = UI.IconTextButton(self, 'assets/import-64.png', 'Import')
         self.startButton = UI.IconTextButton(self, 'assets/play-64.ico', 'Start')
         self.saveButton = UI.IconTextButton(self, 'assets/save-64.png', 'Save')
         self.clearButton = UI.IconTextButton(self, 'assets/clear-64.png', 'Clear')
+        self.progressBar = QProgressBar(self)
         self.classComboBox = QComboBox(self)
         self.typeComboBox = QComboBox(self)
         self.camComboBox = QComboBox(self)
@@ -51,6 +56,7 @@ class Window(QWidget):
         self.typeComboBox.addItem('')
         self.typeComboBox.setCurrentIndex(self.typeComboBox.count()-1)
         self.camComboBox.addItems(['Disable CAM', 'Binary CAM', 'Subtype CAM'])
+        self.progressBar.setValue(0)
         
 
         self.initUI()
@@ -59,7 +65,6 @@ class Window(QWidget):
 
     def connectSignals(self):
         
-
         def changeCurrentImage():
             if self.selectedImgPath is None:
                 self.imageViewer.clear()
@@ -94,36 +99,47 @@ class Window(QWidget):
             imgPaths = list(set(imgPaths) - set(self.imgPaths))
             self.imgPaths.extend(imgPaths)
             self.imageTableWidget.addImages(imgPaths)
-        
-        def inferenceFinished(results):
-            self.startButton.setText('Start')
-            self.startButton.setEnabled(True)
-            self.saveButton.setEnabled(True)
-            self.clearButton.setEnabled(True)
-            self.classComboBox.setEnabled(True)
-            self.typeComboBox.setEnabled(True)
-            self.imageTableWidget.setAcceptDrops(True)
+
+        def importDialog():
+            file_paths = QFileDialog.getOpenFileNames(self, 'Import Images', './', 'Images (*.png *.jpg *.jpeg)')
+            if len(file_paths[0]) == 0:
+                return
+            imported(file_paths[0])
+
+        def freezeWidgetWhenInfer(freeze):
+            enabled = not freeze
+            self.startButton.setText('Start' if enabled else 'inferencing')
+            self.importButton.setEnabled(enabled)
+            self.startButton.setEnabled(enabled)
+            self.saveButton.setEnabled(enabled)
+            self.clearButton.setEnabled(enabled)
+            self.classComboBox.setEnabled(enabled)
+            self.typeComboBox.setEnabled(enabled)
+            self.imageTableWidget.setAcceptDrops(enabled)
+
+        def inferenceProgress(results, progress):
             self.results.update(results)
             self.imageTableWidget.updateResult(results)
+            self.progressBar.setValue(progress)
             changeCurrentImage()
+        
+        def inferenceFinished():
+            freezeWidgetWhenInfer(False)
 
         def startInference():
             toInfer = list(set(self.imgPaths) - set(self.results.keys()))
             if len(toInfer) == 0:
                 return
-            self.startButton.setText('inferencing')
-            self.startButton.setEnabled(False)
-            self.saveButton.setEnabled(False)
-            self.clearButton.setEnabled(False)
-            self.classComboBox.setEnabled(False)
-            self.typeComboBox.setEnabled(False)
-            self.imageTableWidget.setAcceptDrops(False)
+            freezeWidgetWhenInfer(True)
+            self.progressBar.setValue(0)
+            self.progressBar.setMaximum(len(toInfer))
             self.task = InferenceTask(self.backendModel, toInfer)
+            self.task.progress.connect(inferenceProgress)
             self.workerThread = QThread()
             self.task.moveToThread(self.workerThread)
             self.workerThread.started.connect(self.task.run)
-            self.task.finished.connect(self.workerThread.quit)
             self.task.finished.connect(inferenceFinished)
+            self.task.finished.connect(self.workerThread.quit)
             self.task.finished.connect(self.task.deleteLater)
             self.workerThread.finished.connect(self.workerThread.deleteLater)
             self.workerThread.start()
@@ -134,6 +150,17 @@ class Window(QWidget):
                 return
             df = pd.DataFrame(columns=['image_path', 'tumor_class', 'tumor_type'])
             for imgPath in self.results.keys():
+                isConflict = BackendModel.checkConflict(self.results[imgPath]['pred']['binary'], self.results[imgPath]['pred']['subtype'])
+                if isConflict or self.results[imgPath]['pred']['binary'] is None or self.results[imgPath]['pred']['subtype'] is None:
+                    # display warning dialog
+                    tumorClass = BaseBackendModel.get_label('binary', self.results[imgPath]['pred']['binary'])
+                    tumorType = BaseBackendModel.get_label('subtype', self.results[imgPath]['pred']['subtype'])
+                    QMessageBox.warning(self, 'Warning', 
+                                        f'Conflict detected in image: {imgPath}\n' + 
+                                        f'class {tumorClass} is incompatible with type {tumorType}\n' +
+                                        'Please reselect the class and type for this image.')
+                    self.imageTableWidget.selectImageByPath(imgPath)
+                    return
                 tumorClass = BaseBackendModel.get_label('binary', self.results[imgPath]['pred']['binary'])
                 tumorType = BaseBackendModel.get_label('subtype', self.results[imgPath]['pred']['subtype'])
                 # append is deprecated
@@ -154,7 +181,8 @@ class Window(QWidget):
             if not self.selectedImgPath in self.results.keys():
                 self.results[self.selectedImgPath] = BaseBackendModel.generate_empty_result()
             self.results[self.selectedImgPath]['pred']['binary'] = index
-            self.imageTableWidget.updateResult(self.results)
+            updResult = {self.selectedImgPath: self.results[self.selectedImgPath]}
+            self.imageTableWidget.updateResult(updResult)
             changeCurrentImage()
         
         def typeSelected(index):
@@ -163,7 +191,8 @@ class Window(QWidget):
             if not self.selectedImgPath in self.results.keys():
                 self.results[self.selectedImgPath] = BaseBackendModel.generate_empty_result()
             self.results[self.selectedImgPath]['pred']['subtype'] = index
-            self.imageTableWidget.updateResult(self.results)
+            updResult = {self.selectedImgPath: self.results[self.selectedImgPath]}
+            self.imageTableWidget.updateResult(updResult)
             changeCurrentImage()
 
         def camSelected(index):
@@ -172,6 +201,7 @@ class Window(QWidget):
         self.imageTableWidget.itemSelectionChanged.connect(lambda: selectImage(self.imageTableWidget.getSelectedImagePath()))
         self.imageTableWidget.imported.connect(imported)
 
+        self.importButton.clicked.connect(importDialog)
         self.startButton.clicked.connect(startInference)
         self.saveButton.clicked.connect(saveResults)
         self.clearButton.clicked.connect(clear)
@@ -187,12 +217,14 @@ class Window(QWidget):
 
         controllPanel = QWidget(self)
         controllPanel.setLayout(QGridLayout())
-        controllPanel.layout().addWidget(self.startButton, 0, 0, alignment=Qt.AlignHCenter)
-        controllPanel.layout().addWidget(self.saveButton, 1, 0, alignment=Qt.AlignHCenter)
-        controllPanel.layout().addWidget(self.clearButton, 2, 0, alignment=Qt.AlignHCenter)
-        controllPanel.layout().addWidget(self.camComboBox, 0, 1)
-        controllPanel.layout().addWidget(self.classComboBox, 1, 1)
-        controllPanel.layout().addWidget(self.typeComboBox, 2, 1)
+        controllPanel.layout().addWidget(self.importButton, 0, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self.startButton, 1, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self.saveButton, 2, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self.clearButton, 3, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(QLabel('or drag files above'), 0, 1, alignment=Qt.AlignLeft)
+        controllPanel.layout().addWidget(self.camComboBox, 1, 1)
+        controllPanel.layout().addWidget(self.classComboBox, 2, 1)
+        controllPanel.layout().addWidget(self.typeComboBox, 3, 1)
         
         leftPanel = QWidget(self)
         leftPanel.setLayout(QVBoxLayout())
@@ -200,6 +232,7 @@ class Window(QWidget):
         spImgList.setVerticalStretch(1)
         self.imageTableWidget.setSizePolicy(spImgList)
         leftPanel.layout().addWidget(self.imageTableWidget)
+        leftPanel.layout().addWidget(self.progressBar)
         leftPanel.layout().addWidget(controllPanel)
 
 
