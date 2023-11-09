@@ -18,10 +18,10 @@ class ImageViewer(QLabel):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
-        self.initUI()
+        self._initUI()
 
 
-    def initUI(self):
+    def _initUI(self):
         self.setAlignment(Qt.AlignCenter)
 
         pal = QPalette(self.palette())
@@ -47,9 +47,9 @@ class IconTextButton(QPushButton):
     def __init__(self, parent, iconPath, text):
         super().__init__(parent)
         self.parent = parent
-        self.initUI(iconPath, text)
+        self._initUI(iconPath, text)
     
-    def initUI(self, iconPath, text):
+    def _initUI(self, iconPath, text):
         self.setFixedWidth(150)
         self.setText(text)
         self.setFont(QFont("Arial", 12))
@@ -62,69 +62,69 @@ class BaseResultGroupBox(QGroupBox):
         super().__init__(parent)
         self.parent = parent
         self.title = title
-        self.keyLabels = keyLabels
-        self.valueLabels = valueLabels
+        self._keyLabels = keyLabels
+        self._valueLabels = valueLabels
 
     
-    def initUI(self):
+    def _initUI(self):
         self.setTitle(self.title)
         self.setFont(QFont("Arial", 11))
         self.setFixedWidth(400)
 
         self.setLayout(QVBoxLayout())
         
-        for key in self.keyLabels.keys():
+        for key in self._keyLabels.keys():
             itemLayout = QHBoxLayout()
-            itemLayout.addWidget(self.keyLabels[key])
-            itemLayout.addWidget(self.valueLabels[key])
+            itemLayout.addWidget(self._keyLabels[key])
+            itemLayout.addWidget(self._valueLabels[key])
             self.layout().addLayout(itemLayout)
 
 
 class PredictionGroupBox(BaseResultGroupBox):
     
     def __init__(self, parent):
-        self.keyLabels = {
+        self._keyLabels = {
             'class': QLabel("Predicted tumor class:"),
             'type': QLabel("Predicted tumor type:")
         }
-        self.valueLabels = {
+        self._valueLabels = {
             'class': QLabel(),
             'type': QLabel()
         }
 
-        super().__init__(parent, "Prediction", self.keyLabels, self.valueLabels)
+        super().__init__(parent, "Prediction", self._keyLabels, self._valueLabels)
         self.parent = parent
 
-        self.initUI()
+        self._initUI()
 
 
     def updatePredictionIndex(self, tumorClassId, tumorTypeId):
         tumorClass = BaseBackendModel.get_label('binary', tumorClassId)
         tumorType = BaseBackendModel.get_label('subtype', tumorTypeId)
-        self.updatePrediction(tumorClass, tumorType, BackendModel.checkConflict(tumorClassId, tumorTypeId))
+        self._updatePrediction(tumorClass, tumorType, BackendModel.checkConflict(tumorClassId, tumorTypeId))
 
 
-    def updatePrediction(self, tumorClass, tumorType, conflict=False):
+    def _updatePrediction(self, tumorClass, tumorType, conflict=False):
         if tumorClass == 'reject' or conflict:
-            self.valueLabels['class'].setStyleSheet('color: red; font-size: 11pt; font-family: Arial')
+            self._valueLabels['class'].setStyleSheet('color: red; font-size: 11pt; font-family: Arial')
         else:
-            self.valueLabels['class'].setStyleSheet('color: black; font-size: 11pt; font-family: Arial')
+            self._valueLabels['class'].setStyleSheet('color: black; font-size: 11pt; font-family: Arial')
         if tumorType == 'reject' or conflict:
-            self.valueLabels['type'].setStyleSheet('color: red; font-size: 11pt; font-family: Arial')
+            self._valueLabels['type'].setStyleSheet('color: red; font-size: 11pt; font-family: Arial')
         else:
-            self.valueLabels['type'].setStyleSheet('color: black; font-size: 11pt; font-family: Arial')
-        self.valueLabels['class'].setText(tumorClass)
-        self.valueLabels['type'].setText(tumorType)
+            self._valueLabels['type'].setStyleSheet('color: black; font-size: 11pt; font-family: Arial')
+        self._valueLabels['class'].setText(tumorClass)
+        self._valueLabels['type'].setText(tumorType)
 
     
     def reset(self):
-        self.updatePrediction('', '')
+        self._updatePrediction('', '')
 
 
 class ProbabilityGroupBox(BaseResultGroupBox):
 
     def __init__(self, parent):
-        self.keyLabels = {
+        self._keyLabels = {
             'prob_B': QLabel("Benign: "),
             'prob_M': QLabel("Malignant: "),
             'prob_A': QLabel("Adenosis: "),
@@ -136,7 +136,7 @@ class ProbabilityGroupBox(BaseResultGroupBox):
             'prob_MC': QLabel("Mucinous Carcinoma: "),
             'prob_PC': QLabel("Papillary Carcinoma: ")
         }
-        self.valueLabels = {
+        self._valueLabels = {
             'prob_B': QLabel(),
             'prob_M': QLabel(),
             'prob_A': QLabel(),
@@ -148,7 +148,7 @@ class ProbabilityGroupBox(BaseResultGroupBox):
             'prob_MC': QLabel(),
             'prob_PC': QLabel()
         }
-        self.valueSliders = {
+        self._valueSliders = {
             'prob_B': QSlider(Qt.Horizontal),
             'prob_M': QSlider(Qt.Horizontal),
             'prob_A': QSlider(Qt.Horizontal),
@@ -161,62 +161,62 @@ class ProbabilityGroupBox(BaseResultGroupBox):
             'prob_PC': QSlider(Qt.Horizontal)
         }
 
-        super().__init__(parent, "Probability", self.keyLabels, self.valueLabels)
+        super().__init__(parent, "Probability", self._keyLabels, self._valueLabels)
 
-        self.initUI()
+        self._initUI()
     
 
     def updateProbability(self, classProb, typeProb):
         classProb = [round(x, 4) for x in classProb]
         typeProb = [round(x, 4) for x in typeProb]
-        self.valueSliders['prob_B'].setValue(int(classProb[0]*100))
-        self.valueSliders['prob_M'].setValue(int(classProb[1]*100))
-        self.valueSliders['prob_A'].setValue(int(typeProb[0]*100))
-        self.valueSliders['prob_F'].setValue(int(typeProb[1]*100))
-        self.valueSliders['prob_PT'].setValue(int(typeProb[2]*100))
-        self.valueSliders['prob_TA'].setValue(int(typeProb[3]*100))
-        self.valueSliders['prob_DC'].setValue(int(typeProb[4]*100))
-        self.valueSliders['prob_LC'].setValue(int(typeProb[5]*100))
-        self.valueSliders['prob_MC'].setValue(int(typeProb[6]*100))
-        self.valueSliders['prob_PC'].setValue(int(typeProb[7]*100))
+        self._valueSliders['prob_B'].setValue(int(classProb[0]*100))
+        self._valueSliders['prob_M'].setValue(int(classProb[1]*100))
+        self._valueSliders['prob_A'].setValue(int(typeProb[0]*100))
+        self._valueSliders['prob_F'].setValue(int(typeProb[1]*100))
+        self._valueSliders['prob_PT'].setValue(int(typeProb[2]*100))
+        self._valueSliders['prob_TA'].setValue(int(typeProb[3]*100))
+        self._valueSliders['prob_DC'].setValue(int(typeProb[4]*100))
+        self._valueSliders['prob_LC'].setValue(int(typeProb[5]*100))
+        self._valueSliders['prob_MC'].setValue(int(typeProb[6]*100))
+        self._valueSliders['prob_PC'].setValue(int(typeProb[7]*100))
         classProb = [str(x) for x in classProb]
         typeProb = [str(x) for x in typeProb]
-        self.valueLabels['prob_B'].setText(classProb[0])
-        self.valueLabels['prob_M'].setText(classProb[1])
-        self.valueLabels['prob_A'].setText(typeProb[0])
-        self.valueLabels['prob_F'].setText(typeProb[1])
-        self.valueLabels['prob_PT'].setText(typeProb[2])
-        self.valueLabels['prob_TA'].setText(typeProb[3])
-        self.valueLabels['prob_DC'].setText(typeProb[4])
-        self.valueLabels['prob_LC'].setText(typeProb[5])
-        self.valueLabels['prob_MC'].setText(typeProb[6])
-        self.valueLabels['prob_PC'].setText(typeProb[7])
+        self._valueLabels['prob_B'].setText(classProb[0])
+        self._valueLabels['prob_M'].setText(classProb[1])
+        self._valueLabels['prob_A'].setText(typeProb[0])
+        self._valueLabels['prob_F'].setText(typeProb[1])
+        self._valueLabels['prob_PT'].setText(typeProb[2])
+        self._valueLabels['prob_TA'].setText(typeProb[3])
+        self._valueLabels['prob_DC'].setText(typeProb[4])
+        self._valueLabels['prob_LC'].setText(typeProb[5])
+        self._valueLabels['prob_MC'].setText(typeProb[6])
+        self._valueLabels['prob_PC'].setText(typeProb[7])
 
 
     def reset(self):
-        for key in self.valueLabels.keys():
-            self.valueLabels[key].setText('')
-            self.valueSliders[key].setValue(0)
+        for key in self._valueLabels.keys():
+            self._valueLabels[key].setText('')
+            self._valueSliders[key].setValue(0)
 
 
-    def initUI(self):
+    def _initUI(self):
         self.setTitle(self.title)
         self.setFont(QFont("Arial", 11))
         self.setFixedWidth(400)
 
         self.setLayout(QVBoxLayout())
         
-        for key in self.keyLabels.keys():
+        for key in self._keyLabels.keys():
             itemLayout = QHBoxLayout()
-            itemLayout.addWidget(self.keyLabels[key])
-            itemLayout.addWidget(self.valueLabels[key])
+            itemLayout.addWidget(self._keyLabels[key])
+            itemLayout.addWidget(self._valueLabels[key])
             self.layout().addLayout(itemLayout)
-            self.valueSliders[key].setTickPosition(QSlider.NoTicks)
-            self.valueSliders[key].setRange(0, 100)
-            self.valueSliders[key].setSingleStep(1)
-            self.valueSliders[key].setValue(0)
-            self.valueSliders[key].setEnabled(False)
-            self.layout().addWidget(self.valueSliders[key])
+            self._valueSliders[key].setTickPosition(QSlider.NoTicks)
+            self._valueSliders[key].setRange(0, 100)
+            self._valueSliders[key].setSingleStep(1)
+            self._valueSliders[key].setValue(0)
+            self._valueSliders[key].setEnabled(False)
+            self.layout().addWidget(self._valueSliders[key])
 
 
 class ImageTableWidget(QTableWidget):
@@ -226,8 +226,8 @@ class ImageTableWidget(QTableWidget):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
-        self.pathToRow = {}
-        self.initUI()
+        self._pathToRow = {}
+        self._initUI()
         self.setAcceptDrops(True)
 
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -235,7 +235,7 @@ class ImageTableWidget(QTableWidget):
         self.setSelectionMode(QAbstractItemView.SingleSelection)
 
 
-    def initUI(self):
+    def _initUI(self):
         self.setFixedWidth(400)
         self.verticalHeader().setVisible(False)
         self.setColumnCount(4)
@@ -278,7 +278,7 @@ class ImageTableWidget(QTableWidget):
     def addImage(self, imgPath):
         row = self.rowCount()
         self.insertRow(row)
-        self.pathToRow[imgPath] = row
+        self._pathToRow[imgPath] = row
         imgLabel = QLabel()
         imgLabel.setPixmap(QPixmap(imgPath).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         imgLabel.setAlignment(Qt.AlignCenter)
@@ -292,7 +292,7 @@ class ImageTableWidget(QTableWidget):
 
 
     def selectImageByPath(self, imgPath):
-        self.selectRow(self.pathToRow[imgPath])
+        self.selectRow(self._pathToRow[imgPath])
 
 
     def getSelectedImagePath(self):
@@ -305,9 +305,9 @@ class ImageTableWidget(QTableWidget):
     
     def updateResult(self, results):
         for imgPath in results.keys():
-            if not imgPath in self.pathToRow.keys():
+            if not imgPath in self._pathToRow.keys():
                 continue
-            i = self.pathToRow[imgPath]
+            i = self._pathToRow[imgPath]
             tumorClassId = results[imgPath]['pred']['binary']
             tumorTypeId = results[imgPath]['pred']['subtype']
             tumorClass = BaseBackendModel.get_label('binary', tumorClassId, abbrev=True)
@@ -323,7 +323,7 @@ class ImageTableWidget(QTableWidget):
     
 
     def reset(self):
-        self.pathToRow = {}
+        self._pathToRow = {}
         for _ in range(self.rowCount()):
             self.removeRow(0)
             

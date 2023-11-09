@@ -31,74 +31,74 @@ class Window(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         self.setWindowTitle("Breast Cancer Classifier")
-        self.imageViewer = UI.ImageViewer(self)
-        self.importButton = UI.IconTextButton(self, 'assets/import-64.png', 'Import')
-        self.startButton = UI.IconTextButton(self, 'assets/play-64.ico', 'Start')
-        self.saveButton = UI.IconTextButton(self, 'assets/save-64.png', 'Save')
-        self.clearButton = UI.IconTextButton(self, 'assets/clear-64.png', 'Clear')
-        self.progressBar = QProgressBar(self)
-        self.classComboBox = QComboBox(self)
-        self.typeComboBox = QComboBox(self)
-        self.camComboBox = QComboBox(self)
-        self.predGroupBox = UI.PredictionGroupBox(self)
-        self.probGroupBox = UI.ProbabilityGroupBox(self)
-        self.imageTableWidget = UI.ImageTableWidget(self)
+        self._imageViewer = UI.ImageViewer(self)
+        self._importButton = UI.IconTextButton(self, 'assets/import-64.png', 'Import')
+        self._startButton = UI.IconTextButton(self, 'assets/play-64.ico', 'Start')
+        self._saveButton = UI.IconTextButton(self, 'assets/save-64.png', 'Save')
+        self._clearButton = UI.IconTextButton(self, 'assets/clear-64.png', 'Clear')
+        self._progressBar = QProgressBar(self)
+        self._classComboBox = QComboBox(self)
+        self._typeComboBox = QComboBox(self)
+        self._camComboBox = QComboBox(self)
+        self._predGroupBox = UI.PredictionGroupBox(self)
+        self._probGroupBox = UI.ProbabilityGroupBox(self)
+        self._imageTableWidget = UI.ImageTableWidget(self)
 
-        self.results = {}
-        self.backendModel = BackendModel()
-        self.imgPaths = []
-        self.selectedImgPath = None
+        self._results = {}
+        self._backendModel = BackendModel()
+        self._imgPaths = []
+        self._selectedImgPath = None
 
-        self.classComboBox.addItems(BaseBackendModel.get_all_labels('binary'))
-        self.classComboBox.addItem('')
-        self.classComboBox.setCurrentIndex(self.classComboBox.count()-1)
-        self.typeComboBox.addItems(BaseBackendModel.get_all_labels('subtype'))
-        self.typeComboBox.addItem('')
-        self.typeComboBox.setCurrentIndex(self.typeComboBox.count()-1)
-        self.camComboBox.addItems(['Disable CAM', 'Binary CAM', 'Subtype CAM'])
-        self.progressBar.setValue(0)
+        self._classComboBox.addItems(BaseBackendModel.get_all_labels('binary'))
+        self._classComboBox.addItem('')
+        self._classComboBox.setCurrentIndex(self._classComboBox.count()-1)
+        self._typeComboBox.addItems(BaseBackendModel.get_all_labels('subtype'))
+        self._typeComboBox.addItem('')
+        self._typeComboBox.setCurrentIndex(self._typeComboBox.count()-1)
+        self._camComboBox.addItems(['Disable CAM', 'Binary CAM', 'Subtype CAM'])
+        self._progressBar.setValue(0)
         
 
-        self.initUI()
-        self.connectSignals()
+        self._initUI()
+        self._connectSignals()
 
 
-    def connectSignals(self):
+    def _connectSignals(self):
         
         def changeCurrentImage():
-            if self.selectedImgPath is None:
-                self.imageViewer.clear()
-                self.predGroupBox.reset()
-                self.probGroupBox.reset()
-                self.classComboBox.setCurrentIndex(self.classComboBox.count()-1)
-                self.typeComboBox.setCurrentIndex(self.typeComboBox.count()-1)
+            if self._selectedImgPath is None:
+                self._imageViewer.clear()
+                self._predGroupBox.reset()
+                self._probGroupBox.reset()
+                self._classComboBox.setCurrentIndex(self._classComboBox.count()-1)
+                self._typeComboBox.setCurrentIndex(self._typeComboBox.count()-1)
                 return
-            if self.selectedImgPath in self.results.keys():
-                self.imageViewer.setImage(self.selectedImgPath, 
-                                          self.results[self.selectedImgPath]['cam']['binary'] if self.camComboBox.currentIndex() == 1 
-                                          else self.results[self.selectedImgPath]['cam']['subtype'] if self.camComboBox.currentIndex() == 2 
+            if self._selectedImgPath in self._results.keys():
+                self._imageViewer.setImage(self._selectedImgPath, 
+                                          self._results[self._selectedImgPath]['cam']['binary'] if self._camComboBox.currentIndex() == 1 
+                                          else self._results[self._selectedImgPath]['cam']['subtype'] if self._camComboBox.currentIndex() == 2 
                                           else None)
-                classPredIdx = self.results[self.selectedImgPath]['pred']['binary']
-                typePredIdx = self.results[self.selectedImgPath]['pred']['subtype']
-                self.predGroupBox.updatePredictionIndex(classPredIdx, typePredIdx)
-                self.probGroupBox.updateProbability(self.results[self.selectedImgPath]['prob']['binary'], self.results[self.selectedImgPath]['prob']['subtype'])
-                self.classComboBox.setCurrentIndex(classPredIdx if classPredIdx is not None else self.classComboBox.count()-1)
-                self.typeComboBox.setCurrentIndex(typePredIdx if typePredIdx is not None else self.typeComboBox.count()-1)
+                classPredIdx = self._results[self._selectedImgPath]['pred']['binary']
+                typePredIdx = self._results[self._selectedImgPath]['pred']['subtype']
+                self._predGroupBox.updatePredictionIndex(classPredIdx, typePredIdx)
+                self._probGroupBox.updateProbability(self._results[self._selectedImgPath]['prob']['binary'], self._results[self._selectedImgPath]['prob']['subtype'])
+                self._classComboBox.setCurrentIndex(classPredIdx if classPredIdx is not None else self._classComboBox.count()-1)
+                self._typeComboBox.setCurrentIndex(typePredIdx if typePredIdx is not None else self._typeComboBox.count()-1)
             else:
-                self.imageViewer.setImage(self.selectedImgPath)
-                self.predGroupBox.reset()
-                self.probGroupBox.reset()
-                self.classComboBox.setCurrentIndex(self.classComboBox.count()-1)
-                self.typeComboBox.setCurrentIndex(self.typeComboBox.count()-1)
+                self._imageViewer.setImage(self._selectedImgPath)
+                self._predGroupBox.reset()
+                self._probGroupBox.reset()
+                self._classComboBox.setCurrentIndex(self._classComboBox.count()-1)
+                self._typeComboBox.setCurrentIndex(self._typeComboBox.count()-1)
                 
         def selectImage(imgPath):
-            self.selectedImgPath = imgPath
+            self._selectedImgPath = imgPath
             changeCurrentImage()
 
         def imported(imgPaths):
-            imgPaths = list(set(imgPaths) - set(self.imgPaths))
-            self.imgPaths.extend(imgPaths)
-            self.imageTableWidget.addImages(imgPaths)
+            imgPaths = list(set(imgPaths) - set(self._imgPaths))
+            self._imgPaths.extend(imgPaths)
+            self._imageTableWidget.addImages(imgPaths)
 
         def importDialog():
             file_paths = QFileDialog.getOpenFileNames(self, 'Import Images', './', 'Images (*.png *.jpg *.jpeg)')
@@ -108,32 +108,32 @@ class Window(QWidget):
 
         def freezeWidgetWhenInfer(freeze):
             enabled = not freeze
-            self.startButton.setText('Start' if enabled else 'inferencing')
-            self.importButton.setEnabled(enabled)
-            self.startButton.setEnabled(enabled)
-            self.saveButton.setEnabled(enabled)
-            self.clearButton.setEnabled(enabled)
-            self.classComboBox.setEnabled(enabled)
-            self.typeComboBox.setEnabled(enabled)
-            self.imageTableWidget.setAcceptDrops(enabled)
+            self._startButton.setText('Start' if enabled else 'inferencing')
+            self._importButton.setEnabled(enabled)
+            self._startButton.setEnabled(enabled)
+            self._saveButton.setEnabled(enabled)
+            self._clearButton.setEnabled(enabled)
+            self._classComboBox.setEnabled(enabled)
+            self._typeComboBox.setEnabled(enabled)
+            self._imageTableWidget.setAcceptDrops(enabled)
 
         def inferenceProgress(results, progress):
-            self.results.update(results)
-            self.imageTableWidget.updateResult(results)
-            self.progressBar.setValue(progress)
+            self._results.update(results)
+            self._imageTableWidget.updateResult(results)
+            self._progressBar.setValue(progress)
             changeCurrentImage()
         
         def inferenceFinished():
             freezeWidgetWhenInfer(False)
 
         def startInference():
-            toInfer = list(set(self.imgPaths) - set(self.results.keys()))
+            toInfer = list(set(self._imgPaths) - set(self._results.keys()))
             if len(toInfer) == 0:
                 return
             freezeWidgetWhenInfer(True)
-            self.progressBar.setValue(0)
-            self.progressBar.setMaximum(len(toInfer))
-            self.task = InferenceTask(self.backendModel, toInfer)
+            self._progressBar.setValue(0)
+            self._progressBar.setMaximum(len(toInfer))
+            self.task = InferenceTask(self._backendModel, toInfer)
             self.task.progress.connect(inferenceProgress)
             self.workerThread = QThread()
             self.task.moveToThread(self.workerThread)
@@ -145,100 +145,99 @@ class Window(QWidget):
             self.workerThread.start()
 
         def saveResults():
-            file_path = QFileDialog.getSaveFileName(self, 'Save Results', './', 'CSV (*.csv)')
-            if file_path[0] == '':
-                return
             df = pd.DataFrame(columns=['image_path', 'tumor_class', 'tumor_type'])
-            for imgPath in self.results.keys():
-                isConflict = BackendModel.checkConflict(self.results[imgPath]['pred']['binary'], self.results[imgPath]['pred']['subtype'])
-                if isConflict or self.results[imgPath]['pred']['binary'] is None or self.results[imgPath]['pred']['subtype'] is None:
+            for imgPath in self._results.keys():
+                isConflict = BackendModel.checkConflict(self._results[imgPath]['pred']['binary'], self._results[imgPath]['pred']['subtype'])
+                if isConflict or self._results[imgPath]['pred']['binary'] is None or self._results[imgPath]['pred']['subtype'] is None:
                     # display warning dialog
-                    tumorClass = BaseBackendModel.get_label('binary', self.results[imgPath]['pred']['binary'])
-                    tumorType = BaseBackendModel.get_label('subtype', self.results[imgPath]['pred']['subtype'])
+                    tumorClass = BaseBackendModel.get_label('binary', self._results[imgPath]['pred']['binary'])
+                    tumorType = BaseBackendModel.get_label('subtype', self._results[imgPath]['pred']['subtype'])
                     QMessageBox.warning(self, 'Warning', 
                                         f'Conflict detected in image: {imgPath}\n' + 
                                         f'class {tumorClass} is incompatible with type {tumorType}\n' +
                                         'Please reselect the class and type for this image.')
-                    self.imageTableWidget.selectImageByPath(imgPath)
+                    self._imageTableWidget.selectImageByPath(imgPath)
                     return
-                tumorClass = BaseBackendModel.get_label('binary', self.results[imgPath]['pred']['binary'])
-                tumorType = BaseBackendModel.get_label('subtype', self.results[imgPath]['pred']['subtype'])
+                tumorClass = BaseBackendModel.get_label('binary', self._results[imgPath]['pred']['binary'])
+                tumorType = BaseBackendModel.get_label('subtype', self._results[imgPath]['pred']['subtype'])
                 # append is deprecated
                 df.loc[len(df)] = [imgPath, tumorClass, tumorType]
-
+            file_path = QFileDialog.getSaveFileName(self, 'Save Results', './', 'CSV (*.csv)')
+            if file_path[0] == '':
+                return
             df.to_csv(file_path[0], index=False)
 
         def clear():
-            self.imgPaths = []
-            self.results = {}
-            self.selectedImgPath = None
-            self.imageTableWidget.reset()
+            self._imgPaths = []
+            self._results = {}
+            self._selectedImgPath = None
+            self._imageTableWidget.reset()
             changeCurrentImage()
 
         def classSelected(index):
-            if index == self.classComboBox.count()-1 or self.selectedImgPath is None:
+            if index == self._classComboBox.count()-1 or self._selectedImgPath is None:
                 return
-            if not self.selectedImgPath in self.results.keys():
-                self.results[self.selectedImgPath] = BaseBackendModel.generate_empty_result()
-            self.results[self.selectedImgPath]['pred']['binary'] = index
-            updResult = {self.selectedImgPath: self.results[self.selectedImgPath]}
-            self.imageTableWidget.updateResult(updResult)
+            if not self._selectedImgPath in self._results.keys():
+                self._results[self._selectedImgPath] = BaseBackendModel.generate_empty_result()
+            self._results[self._selectedImgPath]['pred']['binary'] = index
+            updResult = {self._selectedImgPath: self._results[self._selectedImgPath]}
+            self._imageTableWidget.updateResult(updResult)
             changeCurrentImage()
         
         def typeSelected(index):
-            if index == self.typeComboBox.count()-1 or self.selectedImgPath is None:
+            if index == self._typeComboBox.count()-1 or self._selectedImgPath is None:
                 return
-            if not self.selectedImgPath in self.results.keys():
-                self.results[self.selectedImgPath] = BaseBackendModel.generate_empty_result()
-            self.results[self.selectedImgPath]['pred']['subtype'] = index
-            updResult = {self.selectedImgPath: self.results[self.selectedImgPath]}
-            self.imageTableWidget.updateResult(updResult)
+            if not self._selectedImgPath in self._results.keys():
+                self._results[self._selectedImgPath] = BaseBackendModel.generate_empty_result()
+            self._results[self._selectedImgPath]['pred']['subtype'] = index
+            updResult = {self._selectedImgPath: self._results[self._selectedImgPath]}
+            self._imageTableWidget.updateResult(updResult)
             changeCurrentImage()
 
         def camSelected(index):
             changeCurrentImage()
 
-        self.imageTableWidget.itemSelectionChanged.connect(lambda: selectImage(self.imageTableWidget.getSelectedImagePath()))
-        self.imageTableWidget.imported.connect(imported)
+        self._imageTableWidget.itemSelectionChanged.connect(lambda: selectImage(self._imageTableWidget.getSelectedImagePath()))
+        self._imageTableWidget.imported.connect(imported)
 
-        self.importButton.clicked.connect(importDialog)
-        self.startButton.clicked.connect(startInference)
-        self.saveButton.clicked.connect(saveResults)
-        self.clearButton.clicked.connect(clear)
+        self._importButton.clicked.connect(importDialog)
+        self._startButton.clicked.connect(startInference)
+        self._saveButton.clicked.connect(saveResults)
+        self._clearButton.clicked.connect(clear)
 
-        self.classComboBox.activated.connect(classSelected)
-        self.typeComboBox.activated.connect(typeSelected)
-        self.camComboBox.activated.connect(camSelected)
+        self._classComboBox.activated.connect(classSelected)
+        self._typeComboBox.activated.connect(typeSelected)
+        self._camComboBox.activated.connect(camSelected)
 
 
-    def initUI(self):
+    def _initUI(self):
         self.resize(1500,800)
         self.setFixedSize(self.size())
 
         controllPanel = QWidget(self)
         controllPanel.setLayout(QGridLayout())
-        controllPanel.layout().addWidget(self.importButton, 0, 0, alignment=Qt.AlignHCenter)
-        controllPanel.layout().addWidget(self.startButton, 1, 0, alignment=Qt.AlignHCenter)
-        controllPanel.layout().addWidget(self.saveButton, 2, 0, alignment=Qt.AlignHCenter)
-        controllPanel.layout().addWidget(self.clearButton, 3, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self._importButton, 0, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self._startButton, 1, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self._saveButton, 2, 0, alignment=Qt.AlignHCenter)
+        controllPanel.layout().addWidget(self._clearButton, 3, 0, alignment=Qt.AlignHCenter)
         controllPanel.layout().addWidget(QLabel('or drag files above'), 0, 1, alignment=Qt.AlignLeft)
-        controllPanel.layout().addWidget(self.camComboBox, 1, 1)
-        controllPanel.layout().addWidget(self.classComboBox, 2, 1)
-        controllPanel.layout().addWidget(self.typeComboBox, 3, 1)
+        controllPanel.layout().addWidget(self._camComboBox, 1, 1)
+        controllPanel.layout().addWidget(self._classComboBox, 2, 1)
+        controllPanel.layout().addWidget(self._typeComboBox, 3, 1)
         
         leftPanel = QWidget(self)
         leftPanel.setLayout(QVBoxLayout())
         spImgList = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         spImgList.setVerticalStretch(1)
-        self.imageTableWidget.setSizePolicy(spImgList)
-        leftPanel.layout().addWidget(self.imageTableWidget)
-        leftPanel.layout().addWidget(self.progressBar)
+        self._imageTableWidget.setSizePolicy(spImgList)
+        leftPanel.layout().addWidget(self._imageTableWidget)
+        leftPanel.layout().addWidget(self._progressBar)
         leftPanel.layout().addWidget(controllPanel)
 
 
         middlePanel = QWidget(self)
         middlePanel.setLayout(QVBoxLayout())
-        middlePanel.layout().addWidget(self.imageViewer)
+        middlePanel.layout().addWidget(self._imageViewer)
         spMiddle = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         spMiddle.setHorizontalStretch(1)
         middlePanel.setSizePolicy(spMiddle)
@@ -247,12 +246,12 @@ class Window(QWidget):
         rightPanel.setLayout(QVBoxLayout())
         spPred = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         spPred.setVerticalStretch(1)
-        self.predGroupBox.setSizePolicy(spPred)
-        rightPanel.layout().addWidget(self.predGroupBox)
+        self._predGroupBox.setSizePolicy(spPred)
+        rightPanel.layout().addWidget(self._predGroupBox)
         spProb = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         spProb.setVerticalStretch(4)
-        self.probGroupBox.setSizePolicy(spProb)
-        rightPanel.layout().addWidget(self.probGroupBox)
+        self._probGroupBox.setSizePolicy(spProb)
+        rightPanel.layout().addWidget(self._probGroupBox)
 
         self.setLayout(QHBoxLayout())
         self.layout().addWidget(leftPanel)
