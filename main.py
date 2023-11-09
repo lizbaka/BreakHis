@@ -95,10 +95,27 @@ class Window(QWidget):
             self._selectedImgPath = imgPath
             changeCurrentImage()
 
+
         def imported(imgPaths):
             imgPaths = list(set(imgPaths) - set(self._imgPaths))
-            self._imgPaths.extend(imgPaths)
-            self._imageTableWidget.addImages(imgPaths)
+            if len(imgPaths) < 300:
+                self._imageTableWidget.addImages(imgPaths)
+                self._imgPaths.extend(imgPaths)
+                return
+            dialog = QProgressDialog('Importing images...', 'Cancel', 0, len(imgPaths), self, Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+            dialog.setWindowTitle('Importing Images')
+            dialog.setWindowModality(Qt.WindowModal)
+            dialog.setFixedSize(400, 100)
+            dialog.show()
+            for i, imgPath in enumerate(imgPaths):
+                self._imgPaths.append(imgPath)
+                self._imageTableWidget.addImage(imgPath)
+                dialog.setLabelText(f'Importing {imgPath}')
+                dialog.setValue(i+1)
+                if dialog.wasCanceled():
+                    break
+            dialog.close()
+
 
         def importDialog():
             file_paths = QFileDialog.getOpenFileNames(self, 'Import Images', './', 'Images (*.png *.jpg *.jpeg)')
