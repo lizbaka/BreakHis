@@ -1,6 +1,6 @@
 numpy==1.24.1
 pandas==2.1.2
-Pillow==10.0.1
+Pillow==10.2.0
 PyQt5==5.15.10
 PyQt5_sip==12.13.0
 torch==2.0.1+cu117
