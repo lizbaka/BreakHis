@@ -3,6 +3,6 @@ pandas==2.1.2
 Pillow==10.3.0
 PyQt5==5.15.10
 PyQt5_sip==12.13.0
-torch==2.0.1+cu117
+torch==2.2.0
 torchcam==0.4.0
 torchvision==0.15.2+cu117
